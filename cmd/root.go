@@ -38,6 +38,7 @@ func Execute(ctx context.Context, version string) {
 	rootCmd.Flags().BoolP("watch", "w", false, "watch the contents of the local repo and run when files change")
 	rootCmd.Flags().BoolP("list", "l", false, "list workflows")
 	rootCmd.Flags().BoolP("graph", "g", false, "draw workflows")
+	rootCmd.Flags().BoolP("authenticate", "", false, "authenticate with GitHub")
 	rootCmd.Flags().StringP("job", "j", "", "run job")
 	rootCmd.Flags().StringArrayVarP(&input.secrets, "secret", "s", []string{}, "secret to make available to actions with optional value (e.g. -s mysecret=foo or -s mysecret)")
 	rootCmd.Flags().StringArrayVarP(&input.envs, "env", "", []string{}, "env to make available to actions with optional value (e.g. --env myenv=foo or --env myenv)")
@@ -235,6 +236,14 @@ func newRunCommand(ctx context.Context, input *Input) func(*cobra.Command, []str
 			return drawGraph(plan)
 		}
 
+		// check if we should just authenticate
+		// we can't use a Cobra.Command because of: `rootCmd.SetArgs(args())`
+		if auth, err := cmd.Flags().GetBool("authenticate"); err != nil {
+			return err
+		} else if auth {
+			return authenticate(input.githubInstance)
+		}
+
 		// check to see if the main branch was defined
 		defaultbranch, err := cmd.Flags().GetString("defaultbranch")
 		if err != nil {
@@ -258,6 +267,12 @@ func newRunCommand(ctx context.Context, input *Input) func(*cobra.Command, []str
 				input.platforms = readArgsFile(cfgLocations[0])
 			}
 		}
+
+		// TODO: github token implementation
+		// 1. if no GITHUB_TOKEN is provided:
+		// 2. try to read gh cli's hosts file to see if a token for the github instance is available
+		// 3. try to read our own token from the OS keyring
+		// 4. continue without token
 
 		// run the plan
 		config := &runner.Config{

@@ -7,6 +7,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/ProtonMail/go-crypto v0.0.0-20210920160938-87db9fbc61c7 // indirect
 	github.com/andreaskoch/go-fswatch v1.0.0
+	github.com/cli/cli/v2 v2.4.0
 	github.com/docker/cli v20.10.13+incompatible
 	github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker v20.10.12+incompatible
@@ -18,9 +19,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14
-	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.10.0
 	github.com/opencontainers/image-spec v1.0.2
