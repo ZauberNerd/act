@@ -11,6 +11,8 @@ jobs:
       - run: '[[ "$(pwd)" == "${GITHUB_WORKSPACE}" ]]'
       - run: echo ${{ env.TEST }} | grep value
       - run: env
+      - run: sleep 10
+      - run: exit 1
       - uses: docker://node:16-buster-slim
         with:
           somekey: ${{ env.TEST }}

@@ -204,7 +204,17 @@ func (rc *RunContext) startJobContainer() common.Executor {
 
 func (rc *RunContext) execJobContainer(cmd []string, env map[string]string, user, workdir string) common.Executor {
 	return func(ctx context.Context) error {
-		return rc.JobContainer.Exec(cmd, env, user, workdir)(ctx)
+		errChan := make(chan error)
+		go func() {
+			errChan <- rc.JobContainer.Exec(cmd, env, user, workdir)(ctx)
+		}()
+
+		select {
+		case <-ctx.Done():
+			return rc.JobContainer.Remove().Then(container.NewDockerVolumeRemoveExecutor(rc.jobContainerName(), false))(context.TODO())
+		case err := <-errChan:
+			return err
+		}
 	}
 }
 
