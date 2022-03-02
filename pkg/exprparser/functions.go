@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/nektos/act/pkg/model"
 	"github.com/rhysd/actionlint"
 )
@@ -177,26 +178,66 @@ func (impl *interperterImpl) fromJSON(value reflect.Value) (interface{}, error) 
 	return data, nil
 }
 
-func (impl *interperterImpl) hashFiles(paths ...reflect.Value) (string, error) {
-	var filepaths []string
+func (impl *interperterImpl) hashFiles(input ...reflect.Value) (string, error) {
+	var inputPatterns []string
 
-	for _, path := range paths {
-		if path.Kind() == reflect.String {
-			filepaths = append(filepaths, path.String())
+	for _, pattern := range input {
+		if pattern.Kind() == reflect.String {
+			str := pattern.String()
+			if strings.HasPrefix(str, "."+string(filepath.Separator)) {
+				str = str[1:]
+			}
+			inputPatterns = append(inputPatterns, str)
 		} else {
 			return "", fmt.Errorf("Non-string path passed to hashFiles")
 		}
 	}
 
+	fmt.Println(inputPatterns)
+
+	var patterns []gitignore.Pattern
+	for _, p := range inputPatterns {
+		patterns = append(patterns, gitignore.ParsePattern(p, nil))
+	}
+
+	matcher := gitignore.NewMatcher(patterns)
+
 	var files []string
 
-	for i := range filepaths {
-		newFiles, err := filepath.Glob(filepath.Join(impl.config.WorkingDir, filepaths[i]))
+	err := filepath.Walk(impl.config.WorkingDir, func(file string, fi os.FileInfo, err error) error {
 		if err != nil {
-			return "", fmt.Errorf("Unable to glob.Glob: %v", err)
+			return err
 		}
 
-		files = append(files, newFiles...)
+		if file == impl.config.WorkingDir {
+			return nil
+		}
+
+		relativePath, _ := filepath.Rel(impl.config.WorkingDir, file)
+		parts := strings.Split(relativePath, string(filepath.Separator))
+		isPartiallyListed := false
+		for _, pattern := range inputPatterns {
+			if strings.HasPrefix(pattern, relativePath){
+				isPartiallyListed = true
+				break
+			}
+		}
+
+		fmt.Println("file: ", file, " relativePath: ", relativePath, " parts: ", parts, "matches: ", matcher.Match(parts, fi.IsDir()))
+
+		if matcher.Match(parts, fi.IsDir()) {
+			if !fi.IsDir() {
+				files = append(files, file)
+			}
+		} else if fi.IsDir() && !isPartiallyListed {
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Cannot hash files. Cause: %v", err)
 	}
 
 	if len(files) == 0 {
