@@ -134,9 +134,12 @@ func readArgsFile(file string) []string {
 }
 
 func setupLogging(cmd *cobra.Command, _ []string) {
-	verbose, _ := cmd.Flags().GetBool("verbose")
-	if verbose {
+	if verbose, _ := cmd.Flags().GetBool("verbose"); verbose {
 		log.SetLevel(log.DebugLevel)
+	}
+
+	if json, _ := cmd.Flags().GetBool("json"); json {
+		log.SetFormatter(&log.JSONFormatter{})
 	}
 }
 
@@ -157,17 +160,8 @@ func readEnvs(path string, envs map[string]string) bool {
 //nolint:gocyclo
 func newRunCommand(ctx context.Context, input *Input) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		if input.jsonLogger {
-			log.SetFormatter(&log.JSONFormatter{})
-		}
-
 		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && input.containerArchitecture == "" {
-			l := log.New()
-			l.SetFormatter(&log.TextFormatter{
-				DisableQuote:     true,
-				DisableTimestamp: true,
-			})
-			l.Warnf(" \U000026A0 You are using Apple M1 chip and you have not specified container architecture, you might encounter issues while running act. If so, try running it with '--container-architecture linux/amd64'. \U000026A0 \n")
+			log.Warnf(" You are using Apple M1 chip and you have not specified container architecture, you might encounter issues while running act. If so, try running it with '--container-architecture linux/amd64'. \n")
 		}
 
 		log.Debugf("Loading environment from %s", input.Envfile())
